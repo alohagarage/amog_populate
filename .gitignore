@@ -1,11 +1,10 @@
-<<<<<<< HEAD
 bin/
 build/
 lib/
 include/
 .pyc
 .swp
-=======
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -59,5 +58,3 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-
->>>>>>> 743421f5fa5011f7620930156f065e837832bc1a
