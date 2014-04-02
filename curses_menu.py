@@ -9,11 +9,11 @@ import atexit
 import time
 
 class cmenu(object):
-    datum = {}
-    ordered = []
-    pos = 0
 
     def __init__(self, options, title="python curses menu"):
+        self.datum = {}
+        self.ordered = []
+        self.pos = 0
         curses.initscr()
         curses.start_color()
         curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
@@ -72,17 +72,29 @@ class cmenu(object):
 
                 ckey = screen.getch()
 
+                print ckey
+
                 if ckey == 258:
                     self.upKey()
 
-                if ckey == 259:
+                elif ckey == 259:
                     self.downKey()
+
+                else:
+                    break
 
             ckey = 0
             self.cleanup()
             if self.pos >= 0 and self.pos < len(self.ordered):
-                self.datum[self.ordered[self.pos]]()
-                self.pos = -1
+                #self.datum[self.ordered[self.pos]
+                #self.pos = -1
+                break
             else:
                 curses.flash()
+
+def top():
+    os.system("top")
+
+def exit():
+    sys.exit(1)
 

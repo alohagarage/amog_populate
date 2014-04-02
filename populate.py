@@ -61,15 +61,33 @@ def find_rels(type, string=None):
     return output
 
 
-def menu(list):
+def menu(list_list):
+    """
     index = raw_input('\n'.join([(str(g[0]) + ' ' + g[1]) for g in enumerate(list)]) + '\n')
     try:
         return list[int(index)]
     except Exception:
         return ''
+    """
+    c = cmenu([{l: l} for l in list_list])
+
+    c.display()
+    
+    print c.pos
+
+    print list_list
+    
+    index = c.pos
+
+    del c
+
+    return list_list[index]
+
+
 
 
 def main():
+
     query = {}
 
     all_things = get_things()
