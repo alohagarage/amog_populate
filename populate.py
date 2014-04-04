@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
-import sys, curses, os, requests, json, curses, traceback, string
+import sys, curses, os, requests, json, curses, traceback, string, yaml
+
+import time
 
 
 from curses_menu import cmenu
@@ -287,6 +289,24 @@ def draw_dict():
         #screen.addstr(17,33, str(counter), curses.A_STANDOUT)
     screen.refresh()
 
+def load_to_amog(query):
+    pass
+
+def write_to_yaml(query, filename):
+    #If filename exists, add
+    # Else, start
+
+    if filename in os.listdir('.'):
+        f = open(filename, 'a')
+    else:
+        f = open(filename, 'w')
+
+    query_container = {"action": "entity/create", "opts": { "access_token": "letmein" }, "q": query }
+    full_query = {"STEP_" + str(time.time()): query_container}
+
+    f.write(yaml.safe_dump(full_query, default_flow_style=False))
+
+
 def main(stdscr):
     global screen
     curses.start_color()
@@ -311,6 +331,10 @@ def main(stdscr):
     # Enter the topbar menu loop
     while topbar_key_handler():
         draw_dict()
+
+    print query_dict
+
+    write_to_yaml( query_dict, 'test.yaml')
 
 
 
