@@ -106,7 +106,7 @@ def relationship_menu():
 def help_func():
     help_lines = []
     offset = 0
-    s = curses.newwin(max_screen_size[0] - 4, 77, 3, 1)
+    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
     fh_help = open('amog_populate_help.txt')
     for line in fh_help.readlines():
         help_lines.append(string.rstrip(line))
@@ -134,7 +134,7 @@ def thing_func():
 
     subtitle = "What sort of thing are you adding here?"
 
-    s = curses.newwin(max_screen_size[0] - 4, 77, 3, 1)
+    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
 
     s.box()
 
@@ -167,7 +167,7 @@ def property_func():
 
     subtitle = "What properties does the entity have"
 
-    s = curses.newwin(max_screen_size[0] - 4, 77, 3, 1)
+    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
 
     s.box()
 
@@ -291,9 +291,9 @@ def main(stdscr):
     global screen
     curses.start_color()
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
-    screen = stdscr.subwin(max_screen_size[0], 79, 0, 0)
+    screen = stdscr.subwin(max_screen_size[0], max_screen_size[1] - 30, 0, 0)
     screen.box()
-    screen.hline(2, 1, curses.ACS_HLINE, 77)
+    screen.hline(2, 1, curses.ACS_HLINE,  max_screen_size[1] - 32)
     screen.refresh()
 
     # Define the topbar menus
