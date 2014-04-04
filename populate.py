@@ -12,10 +12,10 @@ hotkey_attr = curses.A_BOLD | curses.A_UNDERLINE
 menu_attr = curses.A_NORMAL
 
 #-- Define default conversion dictionary
-query_dict = {'target': 'DEFAULT.HTML',
-            'source': 'txt2html.txt',
-            'type':   'INFER',
-            'proxy':  'NONE' }
+query_dict = {
+        'urn:amog:property_type:types': '?',
+        'urn:amog:property_type:id': '?'
+    }
 
 
 EXIT = 0
@@ -53,10 +53,60 @@ def topbar_key_handler(key_assign=None, key_dict={}):
         else:
             return eval(key_dict[c])
 
+def simple_menu(screen, array, title, subtitle):
+
+    #TODO Functionality to enter index directly
+
+
+    screen.clear()
+
+    screen.addstr(2, 2, title, curses.A_STANDOUT | curses.A_BOLD)
+    #screen.addstr(4, 2, subtitle, curses.A_BOLD)
+
+    pos = 0
+
+    ckey = None
+    
+    while ckey != ord('\n'):
+        for n in range(0, len(array)):
+
+            option = array[n]
+
+            try:
+                if n != pos:
+                    screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.A_NORMAL) 
+                else:
+                    screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.color_pair(1)) 
+            except:
+                pass
+
+        screen.refresh()
+
+        ckey = screen.getch()
+
+        if ckey == ord('j'):
+            if pos == (len(array) - 1):
+                pos = 0
+            else:
+                pos += 1
+
+        elif ckey == ord('k'):
+            if pos <= 0:
+                pos = len(array) - 1
+            else:
+                pos -= 1
+        else:
+            break
+
+    return array[pos]
+
+def relationship_menu():
+    pass
+
 def help_func():
     help_lines = []
     offset = 0
-    s = curses.newwin(19, 77, 3, 1)
+    s = curses.newwin(max_screen_size[0] - 4, 77, 3, 1)
     fh_help = open('amog_populate_help.txt')
     for line in fh_help.readlines():
         help_lines.append(string.rstrip(line))
@@ -79,16 +129,86 @@ def help_func():
     return CONTINUE
 
 def thing_func():
-    help_lines = []
-    offset = 0
-    s = curses.newwin(19, 77, 3, 1)
+
+    title = "New Entry Type"
+
+    subtitle = "What sort of thing are you adding here?"
+
+    s = curses.newwin(max_screen_size[0] - 4, 77, 3, 1)
+
     s.box()
-    ckey = None
-    while ckey != ord('q'):
-        ckey = s.getch()
-        s.refresh()
+
+    query_type = simple_menu(s, get_things(), title, subtitle)
+
+    query_dict['urn:amog:property_type:types'] = query_type
 
     s.erase()
+
+    return CONTINUE
+
+def is_simple_property(property_type):
+
+    query = {
+        'urn:amog:property_type:id': property_type
+    }
+
+    r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
+
+    response = json.loads(r.content)['response']
+
+    try:
+        return 'data_type' in response[0]['props']['urn:amog:property_type:ranges']
+    except:
+        return True
+
+def property_func():
+
+    title = "New Property on Entity"
+
+    subtitle = "What properties does the entity have"
+
+    s = curses.newwin(max_screen_size[0] - 4, 77, 3, 1)
+
+    s.box()
+
+    property_type = simple_menu(s, get_thing_properties(query_dict['urn:amog:property_type:types']), title, subtitle)
+
+    s.clear()
+
+    s.box()
+
+    s.refresh()
+
+    if is_simple_property(property_type):
+
+        curses.echo()
+
+        s.addstr(5,4, property_type, curses.A_NORMAL)
+        s.addstr(5,33, " "*43, curses.A_UNDERLINE)
+
+        value = s.getstr(5,33)
+
+        curses.noecho()
+
+        s.erase()
+
+    else:
+
+        curses.echo()
+
+        s.addstr(5,4, "What type of entity would you like to connect?", curses.A_NORMAL)
+        s.addstr(6,33, " "*43, curses.A_UNDERLINE)
+
+        type_to_connect = s.getstr(6,33)
+
+        curses.noecho()
+
+        value = simple_menu(s, find_rels(type_to_connect), "Which of these would you like to connect?", "")
+
+
+        s.erase()
+
+    query_dict[property_type] = value
 
     return CONTINUE
 
@@ -146,20 +266,10 @@ def find_rels(type, string=None):
 
 
 def menu(list_list):
-    """
-    index = raw_input('\n'.join([(str(g[0]) + ' ' + g[1]) for g in enumerate(list)]) + '\n')
-    try:
-        return list[int(index)]
-    except Exception:
-        return ''
-    """
+
     c = cmenu([{l: l} for l in list_list])
 
     c.display()
-    
-    print c.pos
-
-    print list_list
     
     index = c.pos
 
@@ -181,7 +291,7 @@ def main(stdscr):
     global screen
     curses.start_color()
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
-    screen = stdscr.subwin(23, 79, 0, 0)
+    screen = stdscr.subwin(max_screen_size[0], 79, 0, 0)
     screen.box()
     screen.hline(2, 1, curses.ACS_HLINE, 77)
     screen.refresh()
@@ -189,19 +299,12 @@ def main(stdscr):
     # Define the topbar menus
     help_menu = ("Help", "help_func()")
     thing_menu = ("Type", "thing_func()")
+    property_menu = ("Property", "property_func()")
     exit_menu = ("Exit", "EXIT")
 
     # Add the topbar menus to screen object
-    topbar_menu((help_menu, thing_menu, exit_menu))
+    topbar_menu((help_menu, thing_menu, property_menu, exit_menu))
 
-    # Draw the onscreen field titles
-    """
-    screen.addstr(5, 4, "           Source of Input:", curses.A_BOLD)
-    screen.addstr(8, 4, "        Output Destination:", curses.A_BOLD)
-    screen.addstr(11, 4,"           Conversion Type:", curses.A_BOLD)
-    screen.addstr(14, 4,"                Proxy Mode:", curses.A_BOLD)
-    screen.addstr(17, 4,"Conversions during Session:", curses.A_BOLD)
-    """
     screen.addstr(1, 77, "", curses.A_STANDOUT)
     draw_dict()
 
@@ -209,55 +312,18 @@ def main(stdscr):
     while topbar_key_handler():
         draw_dict()
 
-    """
-    query = {}
-
-    all_things = get_things()
-
-    thing = menu(all_things)
-
-    uuid = raw_input("WHAT'S THE ID? ")
-
-    query['urn:amog:property_type:types'] = thing
-
-    query['urn:amog:property_type:id'] = uuid
-
-    all_props = get_thing_properties(thing)
-
-    while True:
-
-        prop = menu(all_props)
-
-        if prop:
-            val = raw_input(prop + ' --> ')
-
-            if '!!' in val:
-
-                split_val = val.split(' ')
-
-                if split_val[2]:
-
-                    val = menu(find_rels(split_val[1], split_val[2]))
-
-                else:
-
-                    val = menu(find_rels(split_val[1]))
-
-
-            query[prop] = val
-            
-        else:
-
-            break
-
-    print json.dumps(query)
-    """
 
 
 if __name__ == '__main__':
     try:
         # Initialize curses
+
         stdscr=curses.initscr()
+
+        global max_screen_size
+
+        max_screen_size = stdscr.getmaxyx()
+
         #curses.start_color()
         # Turn off echoing of keys, and enter cbreak mode,
         # where no buffering is performed on keyboard input
