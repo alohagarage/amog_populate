@@ -163,6 +163,29 @@ def is_simple_property(property_type):
     except:
         return True
 
+def yaml_func():
+
+    title = "Where is the yaml file?"
+
+    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
+
+    s.box()
+
+    curses.echo()
+
+    s.addstr(5,4, title, curses.A_NORMAL)
+    s.addstr(5,33, " "*43, curses.A_UNDERLINE)
+
+    global yaml_destination 
+    yaml_destination = s.getstr(5,33)
+
+    curses.noecho()
+
+    s.erase()
+
+    return CONTINUE
+
+
 def property_func():
 
     title = "New Property on Entity"
@@ -332,9 +355,6 @@ def main(stdscr):
     while topbar_key_handler():
         draw_dict()
 
-    print query_dict
-
-    write_to_yaml( query_dict, 'test.yaml')
 
 
 
@@ -345,6 +365,17 @@ if __name__ == '__main__':
         stdscr=curses.initscr()
 
         global max_screen_size
+
+        global yaml_destination
+
+        if len(sys.argv) > 1:
+
+            yaml_destination = sys.argv[1]
+
+        else:
+
+            yaml_destination = "amog_populate" + time.strftime('%m%d%H%M') + ".yaml"
+
 
         max_screen_size = stdscr.getmaxyx()
 
