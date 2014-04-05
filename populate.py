@@ -23,365 +23,352 @@ DEFAULT_QUERY = {
 
 query_dict = DEFAULT_QUERY
 
-EXIT = 0
-CONTINUE = 1
 
 screen = None
 
-def topbar_menu(menus):
-    left = 2
-    for menu in menus:
-        menu_name = menu[0]
-        menu_hotkey = menu_name[0]
-        menu_no_hot = menu_name[1:]
-        screen.addstr(1, left, menu_hotkey, hotkey_attr)
-        screen.addstr(1, left + 1, menu_no_hot, menu_attr)
-        left = left + len(menu_name) + 3
+class AmogPopulate(object):
 
-        topbar_key_handler((string.upper(menu_hotkey), menu[1]))
-        topbar_key_handler((string.lower(menu_hotkey), menu[1]))
+    def __init__(self, stdscr):
 
-    screen.addstr(1, left - 1, "AMOG POPULATE", curses.A_STANDOUT)
+        self.EXIT = 0
+        self.CONTINUE = 1
 
-    screen.refresh()
+        self.query_dict = DEFAULT_QUERY
 
-def topbar_key_handler(key_assign=None, key_dict={}):
-    if key_assign:
-        key_dict[ord(key_assign[0])] = key_assign[1]
-    else:
-        c = screen.getch()
-        if c in (curses.KEY_END, ord('!')):
-            return 0
-        elif c not in key_dict.keys():
-            curses.beep()
-            return 1
+        self.max_screen_size = stdscr.getmaxyx()
+
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
+
+        self.screen = stdscr.subwin(self.max_screen_size[0], self.max_screen_size[1] - 30, 0, 0)
+        self.screen.box()
+        self.screen.hline(2, 1, curses.ACS_HLINE,  self.max_screen_size[1] - 32)
+        self.screen.refresh()
+
+        if len(sys.argv) > 1:
+
+            self.yaml_destination = sys.argv[1]
+
         else:
-            return eval(key_dict[c])
 
-def simple_menu(screen, array, title, subtitle):
+            self.yaml_destination = "amog_populate" + time.strftime('%m%d%H%M') + ".yaml"
 
-    #TODO Functionality to enter index directly
+        # Define the topbar menus
+        help_menu = ("Help", "self.help_func()")
+        thing_menu = ("Type", "self.thing_func()")
+        property_menu = ("Property", "self.property_func()")
+        submit_menu = ("Submit", "self.load_to_amog()")
+        exit_menu = ("Exit", "self.EXIT")
+
+        # Add the topbar menus to screen object
+        self.topbar_menu((help_menu, thing_menu, property_menu, submit_menu, exit_menu))
+
+        self.screen.addstr(1, 77, "", curses.A_STANDOUT)
+
+        self.draw_dict()
+
+        # Enter the topbar menu loop
+        while self.topbar_key_handler():
+            self.draw_dict()
 
 
-    screen.clear()
+    def topbar_menu(self, menus):
 
-    screen.addstr(2, 2, title, curses.A_STANDOUT | curses.A_BOLD)
-    #screen.addstr(4, 2, subtitle, curses.A_BOLD)
+        left = 2
 
-    pos = 0
+        for menu in menus:
+            menu_name = menu[0]
+            menu_hotkey = menu_name[0]
+            menu_no_hot = menu_name[1:]
 
-    ckey = None
-    
-    while ckey != ord('\n'):
-        for n in range(0, len(array)):
+            self.screen.addstr(1, left, menu_hotkey, hotkey_attr)
+            self.screen.addstr(1, left + 1, menu_no_hot, menu_attr)
 
-            option = array[n]
+            left = left + len(menu_name) + 3
 
-            try:
-                if n != pos:
-                    screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.A_NORMAL) 
+            self.topbar_key_handler((string.upper(menu_hotkey), menu[1]))
+            self.topbar_key_handler((string.lower(menu_hotkey), menu[1]))
+
+        self.screen.addstr(1, left - 1, "AMOG POPULATE", curses.A_STANDOUT)
+
+        self.screen.refresh()
+
+
+    def topbar_key_handler(self, key_assign=None, key_dict={}):
+        if key_assign:
+            key_dict[ord(key_assign[0])] = key_assign[1]
+        else:
+            c = self.screen.getch()
+            if c in (curses.KEY_END, ord('!')):
+                return 0
+            elif c not in key_dict.keys():
+                curses.beep()
+                return 1
+            else:
+                return eval(key_dict[c])
+
+    def simple_menu(self, screen, array, title, subtitle):
+
+        #TODO Functionality to enter index directly
+
+        #screen.clear()
+
+        screen.addstr(2, 2, title, curses.A_STANDOUT | curses.A_BOLD)
+        #screen.addstr(4, 2, subtitle, curses.A_BOLD)
+
+        pos = 0
+
+        ckey = None
+        
+        while ckey != ord('\n'):
+            for n in range(0, len(array)):
+
+                option = array[n]
+
+                try:
+                    if n != pos:
+                        screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.A_NORMAL) 
+                    else:
+                        screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.color_pair(1)) 
+                except:
+                    pass
+
+            screen.refresh()
+
+            ckey = self.screen.getch()
+
+            if ckey == ord('j'):
+                if pos == (len(array) - 1):
+                    pos = 0
                 else:
-                    screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.color_pair(1)) 
-            except:
-                pass
+                    pos += 1
 
-        screen.refresh()
-
-        ckey = screen.getch()
-
-        if ckey == ord('j'):
-            if pos == (len(array) - 1):
-                pos = 0
+            elif ckey == ord('k'):
+                if pos <= 0:
+                    pos = len(array) - 1
+                else:
+                    pos -= 1
             else:
-                pos += 1
+                break
 
-        elif ckey == ord('k'):
-            if pos <= 0:
-                pos = len(array) - 1
-            else:
-                pos -= 1
-        else:
-            break
+        return array[pos]
 
-    return array[pos]
 
-def relationship_menu():
-    pass
+    def help_func(self):
+        help_lines = []
+        offset = 0
+        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
+        fh_help = open('amog_populate_help.txt')
+        for line in fh_help.readlines():
+            help_lines.append(string.rstrip(line))
+        s.box()
+        num_lines = len(help_lines)
+        end = 0
+        while not end:
+            for i in range(1,18):
+                if i+offset < num_lines:
+                    line = string.ljust(help_lines[i+offset],74)[:74]
+                else:
+                    line = " "*74
+                    end = 1
+                if i<3 and offset>0: s.addstr(i, 2, line, curses.A_BOLD)
+                else: s.addstr(i, 2, line, curses.A_NORMAL)
+            s.refresh()
+            c = s.getch()
+            offset = offset+15
+        s.erase()
+        return self.CONTINUE
 
-def help_func():
-    help_lines = []
-    offset = 0
-    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
-    fh_help = open('amog_populate_help.txt')
-    for line in fh_help.readlines():
-        help_lines.append(string.rstrip(line))
-    s.box()
-    num_lines = len(help_lines)
-    end = 0
-    while not end:
-        for i in range(1,18):
-            if i+offset < num_lines:
-                line = string.ljust(help_lines[i+offset],74)[:74]
-            else:
-                line = " "*74
-                end = 1
-            if i<3 and offset>0: s.addstr(i, 2, line, curses.A_BOLD)
-            else: s.addstr(i, 2, line, curses.A_NORMAL)
+    def thing_func(self):
+
+        title = "New Entry Type"
+
+        subtitle = "What sort of thing are you adding here?"
+
+        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
+
+        s.box()
+
+        query_type = self.simple_menu(s, self.get_things(), title, subtitle)
+
+        self.query_dict['urn:amog:property_type:types'] = query_type
+
+        s.erase()
+
+        return self.CONTINUE
+
+    def is_simple_property(self,property_type):
+
+        query = {
+            'urn:amog:property_type:id': property_type
+        }
+
+        r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
+
+        response = json.loads(r.content)['response']
+
+        try:
+            return 'data_type' in response[0]['props']['urn:amog:property_type:ranges']
+        except:
+            return True
+
+
+    def property_func(self):
+
+        title = "New Property on Entity"
+
+        subtitle = "What properties does the entity have"
+
+        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
+
+        s.box()
+
+        property_type = self.simple_menu(s, self.get_thing_properties(self.query_dict['urn:amog:property_type:types']), title, subtitle)
+
+        s.clear()
+
+        s.box()
+
         s.refresh()
-        c = s.getch()
-        offset = offset+15
-    s.erase()
-    return CONTINUE
 
-def thing_func():
+        if self.is_simple_property(property_type):
 
-    title = "New Entry Type"
+            curses.echo()
 
-    subtitle = "What sort of thing are you adding here?"
+            s.addstr(5,4, property_type, curses.A_NORMAL)
+            s.addstr(5,33, " "*43, curses.A_UNDERLINE)
 
-    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
+            value = s.getstr(5,33)
 
-    s.box()
+            curses.noecho()
 
-    query_type = simple_menu(s, get_things(), title, subtitle)
+            s.erase()
 
-    query_dict['urn:amog:property_type:types'] = query_type
+        else:
 
-    s.erase()
+            curses.echo()
 
-    return CONTINUE
+            s.addstr(5,4, "What type of entity would you like to connect?", curses.A_NORMAL)
+            s.addstr(6,33, " "*43, curses.A_UNDERLINE)
 
-def is_simple_property(property_type):
+            type_to_connect = s.getstr(6,33)
 
-    query = {
-        'urn:amog:property_type:id': property_type
-    }
+            curses.noecho()
 
-    r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
+            value = self.simple_menu(s, self.find_rels(type_to_connect), "Which of these would you like to connect?", "")
 
-    response = json.loads(r.content)['response']
+            s.erase()
 
-    try:
-        return 'data_type' in response[0]['props']['urn:amog:property_type:ranges']
-    except:
-        return True
+        self.query_dict[property_type] = value
 
-def yaml_func():
+        return self.CONTINUE
 
-    title = "Where is the yaml file?"
 
-    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
+    def get_things(self):
 
-    s.box()
+        query = { 'urn:amog:property_type:ancestors': 'urn:amog:entity_type:thing' }
 
-    curses.echo()
+        return self.get_ids(query)
 
-    s.addstr(5,4, title, curses.A_NORMAL)
-    s.addstr(5,33, " "*43, curses.A_UNDERLINE)
 
-    global yaml_destination 
-    yaml_destination = s.getstr(5,33)
+    def get_ids(self, query):
 
-    curses.noecho()
+        r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
 
-    s.erase()
+        response = json.loads(r.content)['response']
+        
+        return [r['props']['urn:amog:property_type:id'] for r in response]
 
-    return CONTINUE
 
+    def get_thing_properties(self, id):
+        query = {
+            'urn:amog:property_type:id': id
+        }
 
-def property_func():
+        r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
 
-    title = "New Property on Entity"
+        response = json.loads(r.content)['response']
 
-    subtitle = "What properties does the entity have"
+        try:
+            output = response[0]['props']['urn:amog:property_type:properties'] + response[0]['props']['urn:amog:property_type:specific_properties']
+        except:
+            output = response[0]['props']['urn:amog:property_type:properties']
 
-    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
+        return output
 
-    s.box()
 
-    property_type = simple_menu(s, get_thing_properties(query_dict['urn:amog:property_type:types']), title, subtitle)
+    def find_rels(self, type, string=None):
+        query = {
 
-    s.clear()
+            'urn:amog:property_type:types': 'urn:amog:entity_type:' + type
 
-    s.box()
+        }
 
-    s.refresh()
+        r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
 
-    if is_simple_property(property_type):
+        response = json.loads(r.content)['response']
+        
+        if string:
+            output = [r['props']['urn:amog:property_type:id'] for r in response if string in r['props']['urn:amog:property_type:id']]
+        else:
+            output = [r['props']['urn:amog:property_type:id'] for r in response]
 
-        curses.echo()
+        return output
 
-        s.addstr(5,4, property_type, curses.A_NORMAL)
-        s.addstr(5,33, " "*43, curses.A_UNDERLINE)
 
-        value = s.getstr(5,33)
 
-        curses.noecho()
+    def draw_dict(self):
+        for i in range(len(self.query_dict.keys())):
+            key = self.query_dict.keys()[i]
+            whitespace = 27 - len(key)
+            self.screen.addstr(5 + (i * 3),33, " "*43, curses.A_NORMAL)
+            self.screen.addstr(5 + (i * 3), 4, " "*whitespace + key, curses.A_BOLD)
+            self.screen.addstr(5 + (i * 3), 33, query_dict[key], curses.A_STANDOUT)
+        self.screen.refresh()
 
-        s.erase()
 
-    else:
+    def load_to_amog():
+        opts = {'access_token': 'letmein'}
+        r = requests.get(API_ENDPOINT + '/entity/create?q=' + json.dumps(query_dict) + '&opts=' + json.dumps(opts))
 
-        curses.echo()
+        if r.status_code == 200:
+            message = "SUCCESS!"
+        else:
+            message = "FAILURE\n" + json.dumps(query_dict) + "\nFAILED with error:\n" + r.content
 
-        s.addstr(5,4, "What type of entity would you like to connect?", curses.A_NORMAL)
-        s.addstr(6,33, " "*43, curses.A_UNDERLINE)
+        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
 
-        type_to_connect = s.getstr(6,33)
+        s.box()
 
-        curses.noecho()
+        s.addstr(5, 5, message, curses.A_BOLD)
 
-        value = simple_menu(s, find_rels(type_to_connect), "Which of these would you like to connect?", "")
+        ckey = None
 
+        while ckey != ord('\n'):
+            ckey = s.getch()
 
-        s.erase()
+        write_to_yaml( query_dict, yaml_destination)
 
-    query_dict[property_type] = value
+        return self.CONTINUE
 
-    return CONTINUE
+    def write_to_yaml(query, filename):
+        #If filename exists, add
+        # Else, start
 
+        if filename in os.listdir('.'):
+            f = open(filename, 'a')
+        else:
+            f = open(filename, 'w')
 
-def get_things():
+        query_container = {"action": "entity/create", "opts": { "access_token": "letmein" }, "q": query }
+        full_query = {"STEP_" + str(time.time()): query_container}
 
-    query = { 'urn:amog:property_type:ancestors': 'urn:amog:entity_type:thing' }
-
-    return get_ids(query)
-
-
-def get_ids(query):
-
-    r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
-
-    response = json.loads(r.content)['response']
-    
-    return [r['props']['urn:amog:property_type:id'] for r in response]
-
-
-def get_thing_properties(id):
-    query = {
-        'urn:amog:property_type:id': id
-    }
-
-    r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
-
-    response = json.loads(r.content)['response']
-
-    try:
-        output = response[0]['props']['urn:amog:property_type:properties'] + response[0]['props']['urn:amog:property_type:specific_properties']
-    except:
-        output = response[0]['props']['urn:amog:property_type:properties']
-
-    return output
-
-
-def find_rels(type, string=None):
-    query = {
-
-        'urn:amog:property_type:types': 'urn:amog:entity_type:' + type
-
-    }
-
-    r = requests.get(API_ENDPOINT + '/entity/search?q=' + json.dumps(query))
-
-    response = json.loads(r.content)['response']
-    
-    if string:
-        output = [r['props']['urn:amog:property_type:id'] for r in response if string in r['props']['urn:amog:property_type:id']]
-    else:
-        output = [r['props']['urn:amog:property_type:id'] for r in response]
-
-    return output
-
-
-def menu(list_list):
-
-    c = cmenu([{l: l} for l in list_list])
-
-    c.display()
-    
-    index = c.pos
-
-    del c
-
-    return list_list[index]
-
-def draw_dict():
-    for i in range(len(query_dict.keys())):
-        key = query_dict.keys()[i]
-        whitespace = 27 - len(key)
-        screen.addstr(5 + (i * 3),33, " "*43, curses.A_NORMAL)
-        screen.addstr(5 + (i * 3), 4, " "*whitespace + key, curses.A_BOLD)
-        screen.addstr(5 + (i * 3), 33, query_dict[key], curses.A_STANDOUT)
-        #screen.addstr(17,33, str(counter), curses.A_STANDOUT)
-    screen.refresh()
-
-
-def load_to_amog():
-    opts = {'access_token': 'letmein'}
-    r = requests.get(API_ENDPOINT + '/entity/create?q=' + json.dumps(query_dict) + '&opts=' + json.dumps(opts))
-
-    if r.status_code == 200:
-        message = "SUCCESS!"
-    else:
-        message = "FAILURE\n" + json.dumps(query_dict) + "\nFAILED with error:\n" + r.content
-
-    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
-
-    s.box()
-
-    s.addstr(5, 5, message, curses.A_BOLD)
-
-    ckey = None
-
-    while ckey != ord('\n'):
-        ckey = s.getch()
-
-    write_to_yaml( query_dict, yaml_destination)
-
-    return CONTINUE
-
-def write_to_yaml(query, filename):
-    #If filename exists, add
-    # Else, start
-
-    if filename in os.listdir('.'):
-        f = open(filename, 'a')
-    else:
-        f = open(filename, 'w')
-
-    query_container = {"action": "entity/create", "opts": { "access_token": "letmein" }, "q": query }
-    full_query = {"STEP_" + str(time.time()): query_container}
-
-    f.write(yaml.safe_dump(full_query, default_flow_style=False))
+        f.write(yaml.safe_dump(full_query, default_flow_style=False))
 
 
 def main(stdscr):
-    global screen
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
-    screen = stdscr.subwin(max_screen_size[0], max_screen_size[1] - 30, 0, 0)
-    screen.box()
-    screen.hline(2, 1, curses.ACS_HLINE,  max_screen_size[1] - 32)
-    screen.refresh()
 
-    # Define the topbar menus
-    help_menu = ("Help", "help_func()")
-    thing_menu = ("Type", "thing_func()")
-    property_menu = ("Property", "property_func()")
-    submit_menu = ("Submit", "load_to_amog()")
-    exit_menu = ("Exit", "EXIT")
-
-    # Add the topbar menus to screen object
-    topbar_menu((help_menu, thing_menu, property_menu, submit_menu, exit_menu))
-
-    screen.addstr(1, 77, "", curses.A_STANDOUT)
-    draw_dict()
-
-    # Enter the topbar menu loop
-    while topbar_key_handler():
-        draw_dict()
-
-
+    am = AmogPopulate(stdscr)
 
 
 if __name__ == '__main__':
@@ -389,21 +376,6 @@ if __name__ == '__main__':
         # Initialize curses
 
         stdscr=curses.initscr()
-
-        global max_screen_size
-
-        global yaml_destination
-
-        if len(sys.argv) > 1:
-
-            yaml_destination = sys.argv[1]
-
-        else:
-
-            yaml_destination = "amog_populate" + time.strftime('%m%d%H%M') + ".yaml"
-
-
-        max_screen_size = stdscr.getmaxyx()
 
         #curses.start_color()
         # Turn off echoing of keys, and enter cbreak mode,
