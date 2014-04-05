@@ -14,11 +14,14 @@ hotkey_attr = curses.A_BOLD | curses.A_UNDERLINE
 menu_attr = curses.A_NORMAL
 
 #-- Define default conversion dictionary
-query_dict = {
+
+
+DEFAULT_QUERY = {
         'urn:amog:property_type:types': '?',
         'urn:amog:property_type:id': '?'
     }
 
+query_dict = DEFAULT_QUERY
 
 EXIT = 0
 CONTINUE = 1
