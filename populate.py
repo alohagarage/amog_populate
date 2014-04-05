@@ -312,8 +312,30 @@ def draw_dict():
         #screen.addstr(17,33, str(counter), curses.A_STANDOUT)
     screen.refresh()
 
-def load_to_amog(query):
-    pass
+
+def load_to_amog():
+    opts = {'access_token': 'letmein'}
+    r = requests.get(API_ENDPOINT + '/entity/create?q=' + json.dumps(query_dict) + '&opts=' + json.dumps(opts))
+
+    if r.status_code == 200:
+        message = "SUCCESS!"
+    else:
+        message = "FAILURE\n" + json.dumps(query_dict) + "\nFAILED with error:\n" + r.content
+
+    s = curses.newwin(max_screen_size[0] - 4,  max_screen_size[1] - 32, 3, 1)
+
+    s.box()
+
+    s.addstr(5, 5, message, curses.A_BOLD)
+
+    ckey = None
+
+    while ckey != ord('\n'):
+        ckey = s.getch()
+
+    write_to_yaml( query_dict, yaml_destination)
+
+    return CONTINUE
 
 def write_to_yaml(query, filename):
     #If filename exists, add
@@ -343,10 +365,11 @@ def main(stdscr):
     help_menu = ("Help", "help_func()")
     thing_menu = ("Type", "thing_func()")
     property_menu = ("Property", "property_func()")
+    submit_menu = ("Submit", "load_to_amog()")
     exit_menu = ("Exit", "EXIT")
 
     # Add the topbar menus to screen object
-    topbar_menu((help_menu, thing_menu, property_menu, exit_menu))
+    topbar_menu((help_menu, thing_menu, property_menu, submit_menu, exit_menu))
 
     screen.addstr(1, 77, "", curses.A_STANDOUT)
     draw_dict()
