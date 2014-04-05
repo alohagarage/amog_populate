@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
-import sys, curses, os, requests, json, curses, traceback, string, yaml
+import sys, curses, os, requests, json
+import curses, traceback, string, yaml
+import copy
 
 import time
 
@@ -16,24 +18,22 @@ menu_attr = curses.A_NORMAL
 #-- Define default conversion dictionary
 
 
-DEFAULT_QUERY = {
-        'urn:amog:property_type:types': '?',
-        'urn:amog:property_type:id': '?'
-    }
 
-query_dict = DEFAULT_QUERY
-
-
-screen = None
 
 class AmogPopulate(object):
 
     def __init__(self, stdscr):
+        self.screen = None
 
         self.EXIT = 0
         self.CONTINUE = 1
 
-        self.query_dict = DEFAULT_QUERY
+        self.DEFAULT_QUERY = {
+                'urn:amog:property_type:types': '?',
+                'urn:amog:property_type:id': '?'
+            }
+
+        self.query_dict = copy.copy(self.DEFAULT_QUERY)
 
         self.max_screen_size = stdscr.getmaxyx()
 
@@ -323,18 +323,18 @@ class AmogPopulate(object):
             whitespace = 27 - len(key)
             self.screen.addstr(5 + (i * 3),33, " "*43, curses.A_NORMAL)
             self.screen.addstr(5 + (i * 3), 4, " "*whitespace + key, curses.A_BOLD)
-            self.screen.addstr(5 + (i * 3), 33, query_dict[key], curses.A_STANDOUT)
+            self.screen.addstr(5 + (i * 3), 33, self.query_dict[key], curses.A_STANDOUT)
         self.screen.refresh()
 
 
-    def load_to_amog():
+    def load_to_amog(self):
         opts = {'access_token': 'letmein'}
-        r = requests.get(API_ENDPOINT + '/entity/create?q=' + json.dumps(query_dict) + '&opts=' + json.dumps(opts))
+        r = requests.get(API_ENDPOINT + '/entity/create?q=' + json.dumps(self.query_dict) + '&opts=' + json.dumps(opts))
 
         if r.status_code == 200:
             message = "SUCCESS!"
         else:
-            message = "FAILURE\n" + json.dumps(query_dict) + "\nFAILED with error:\n" + r.content
+            message = "FAILURE\n" + json.dumps(self.query_dict) + "\nFAILED with error:\n" + r.content
 
         s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
 
@@ -347,11 +347,13 @@ class AmogPopulate(object):
         while ckey != ord('\n'):
             ckey = s.getch()
 
-        write_to_yaml( query_dict, yaml_destination)
+        self.write_to_yaml( self.query_dict, self.yaml_destination)
+
+        self.query_dict = self.DEFAULT_QUERY
 
         return self.CONTINUE
 
-    def write_to_yaml(query, filename):
+    def write_to_yaml(self, query, filename):
         #If filename exists, add
         # Else, start
 
