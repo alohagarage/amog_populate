@@ -6,6 +6,8 @@ import copy
 
 import time
 
+import logging
+
 
 from curses_menu import cmenu
 
@@ -14,6 +16,8 @@ ENTITY_TYPE = ''
 
 hotkey_attr = curses.A_BOLD | curses.A_UNDERLINE
 menu_attr = curses.A_NORMAL
+
+logging.basicConfig(filename='amog_populate.log',level=logging.DEBUG)
 
 #-- Define default conversion dictionary
 
