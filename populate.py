@@ -111,18 +111,23 @@ class AmogPopulate(object):
             else:
                 return eval(key_dict[c])
 
-    def simple_menu(self, screen, array, title, subtitle):
+    def simple_menu(self, array, title):
 
         #TODO Functionality to enter index directly
 
-        #screen.clear()
+        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
 
-        screen.addstr(2, 2, title, curses.A_STANDOUT | curses.A_BOLD)
-        #screen.addstr(4, 2, subtitle, curses.A_BOLD)
+        s.box()
+
+
+        s.addstr(2, 2, title, curses.A_STANDOUT | curses.A_BOLD)
 
         pos = 0
 
         ckey = None
+
+        #array.sort(reverse=True)
+        array.sort()
         
         while ckey != ord('\n'):
             for n in range(0, len(array)):
@@ -131,13 +136,13 @@ class AmogPopulate(object):
 
                 try:
                     if n != pos:
-                        screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.A_NORMAL) 
+                        s.addstr(3 + n, 4, "%d. %s" % (n, option), curses.A_NORMAL) 
                     else:
-                        screen.addstr(3 + n, 4, "%d. %s" % (n, option), curses.color_pair(1)) 
+                        s.addstr(3 + n, 4, "%d. %s" % (n, option), curses.color_pair(1)) 
                 except:
                     pass
 
-            screen.refresh()
+            s.refresh()
 
             ckey = self.screen.getch()
 
@@ -154,6 +159,8 @@ class AmogPopulate(object):
                     pos -= 1
             else:
                 break
+
+        s.erase()
 
         return array[pos]
 
@@ -184,24 +191,19 @@ class AmogPopulate(object):
         return self.CONTINUE
 
     def thing_func(self):
+        
+        logging.info("STARTING THING FUNC")
 
         title = "New Entry Type"
 
-        subtitle = "What sort of thing are you adding here?"
-
-        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
-
-        s.box()
-
-        query_type = self.simple_menu(s, self.get_things(), title, subtitle)
+        query_type = self.simple_menu(self.get_things(), title)
 
         self.query_dict['urn:amog:property_type:types'] = query_type
 
-        s.erase()
-
         return self.CONTINUE
 
-    def is_simple_property(self,property_type):
+
+    def is_property_rel(self,property_type):
 
         query = {
             'urn:amog:property_type:id': property_type
@@ -211,33 +213,41 @@ class AmogPopulate(object):
 
         response = json.loads(r.content)['response']
 
-        try:
-            return 'data_type' in response[0]['props']['urn:amog:property_type:ranges']
-        except:
-            return True
+        ranges = response[0]['props']['urn:amog:property_type:ranges']
+
+        logging.debug("ranges")
+        logging.debug(ranges)
+
+        if 'data_type' in ranges:
+
+            return None
+
+        else:
+
+            return ranges
+
+
 
 
     def property_func(self):
 
         title = "New Property on Entity"
 
-        subtitle = "What properties does the entity have"
+        property_type = self.simple_menu(self.get_thing_properties(self.query_dict['urn:amog:property_type:types']), title)
 
-        s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
+        prop = self.is_property_rel(property_type)
 
-        s.box()
+        logging.info("RETURNED FROM RANGE CALL")
 
-        property_type = self.simple_menu(s, self.get_thing_properties(self.query_dict['urn:amog:property_type:types']), title, subtitle)
+        logging.info(prop)
 
-        s.clear()
-
-        s.box()
-
-        s.refresh()
-
-        if self.is_simple_property(property_type):
+        if not prop:
 
             curses.echo()
+
+            s = curses.newwin(self.max_screen_size[0] - 4,  self.max_screen_size[1] - 32, 3, 1)
+
+            s.box()
 
             s.addstr(5,4, property_type, curses.A_NORMAL)
             s.addstr(5,33, " "*43, curses.A_UNDERLINE)
@@ -250,20 +260,13 @@ class AmogPopulate(object):
 
         else:
 
-            curses.echo()
+            value = self.simple_menu(self.find_rels(prop), "Which of these would you like to connect?")
 
-            s.addstr(5,4, "What type of entity would you like to connect?", curses.A_NORMAL)
-            s.addstr(6,33, " "*43, curses.A_UNDERLINE)
+        if not value.rstrip():
+            del self.query_dict[property_type]
 
-            type_to_connect = s.getstr(6,33)
-
-            curses.noecho()
-
-            value = self.simple_menu(s, self.find_rels(type_to_connect), "Which of these would you like to connect?", "")
-
-            s.erase()
-
-        self.query_dict[property_type] = value
+        else:
+            self.query_dict[property_type] = value
 
         return self.CONTINUE
 
@@ -304,7 +307,7 @@ class AmogPopulate(object):
     def find_rels(self, type, string=None):
         query = {
 
-            'urn:amog:property_type:types': 'urn:amog:entity_type:' + type
+            'urn:amog:property_type:types': type
 
         }
 
@@ -322,12 +325,23 @@ class AmogPopulate(object):
 
 
     def draw_dict(self):
+
+        for l in range((self.max_screen_size[0] - 10)):
+
+            self.screen.addstr(( 5 + l) , 4, " " * (self.max_screen_size[1] - 44), curses.A_NORMAL)
+
+        self.screen.refresh()
+
         for i in range(len(self.query_dict.keys())):
+
             key = self.query_dict.keys()[i]
-            whitespace = 27 - len(key)
-            self.screen.addstr(5 + (i * 3),33, " "*43, curses.A_NORMAL)
-            self.screen.addstr(5 + (i * 3), 4, " "*whitespace + key, curses.A_BOLD)
-            self.screen.addstr(5 + (i * 3), 33, self.query_dict[key], curses.A_STANDOUT)
+
+            string = key + ' -- ' + self.query_dict[key]
+
+            whitespace = " " * (self.max_screen_size[1] - len(string) - 44)
+
+            self.screen.addstr(5 + (i * 3), 4, string + whitespace, curses.A_BOLD)
+
         self.screen.refresh()
 
 
@@ -403,7 +417,6 @@ if __name__ == '__main__':
         stdscr.keypad(0)
         curses.echo() ; curses.nocbreak()
         curses.endwin()
-        traceback.print_exc()           # Print the exception
 
     
 
