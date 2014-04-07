@@ -5,13 +5,11 @@ Populate the AMOG
 
 
 ##TODO
-- Classify
-- sort menu
-- delete param
+- AMI Intro
+- Add parameter to existing entity
 - refactor
 - filter menu by string
 - paging on menu
 - free query amog
 - better UI panels
 - error handling
-- AMI Intro
