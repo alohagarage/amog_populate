@@ -12,4 +12,3 @@ Populate the AMOG
 - paging on menu
 - free query amog
 - better UI panels
-- error handling
